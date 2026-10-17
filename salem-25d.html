@@ -12,8 +12,42 @@ const wallH=83;rect(p.x,p.y-deep-r*.15,r,deep,b.wall);c.beginPath();c.moveTo(p.x
 for(let i=0;i<3;i++){let xx=p.x+30+i*(r-70)/3;rect(xx,p.y-deep+35,43,65,'#bd875e');rect(xx+17,p.y-deep+35,5,65,'#51333e');rect(xx,p.y-deep+65,43,4,'#51333e')}rect(p.x+r/2-27,p.y-107,54,107,'#241923');rect(p.x+r/2-22,p.y-101,44,98,'#6a4638');rect(p.x+r/2+13,p.y-56,4,4,'#ecd68a');txt(b.name,p.x+r/2,p.y-deep+13,17,'#f1c68b');
 c.fillStyle='#0006';c.beginPath();c.ellipse(p.x+r/2,p.y+8,r*.54,20,0,0,7);c.fill();}
 function walkable(x,y){if(x<45||y<90||x>world.w-45||y>world.h-55)return false;return !blocks.some(b=>x>b.x-25&&x<b.x+b.w+25&&y>b.y-180&&y<b.y-4)}
-function ground(){rect(0,0,sw,sh,'#28202e');const a=screen(0,0);rect(a.x,a.y,world.w,world.h,'#343039');let paths=[{x:0,y:765,w:world.w,h:400},{x:1130,y:0,w:270,h:world.h},{x:0,y:1000,w:world.w,h:90}];paths.forEach(q=>{const s=screen(q.x,q.y);rect(s.x,s.y,q.w,q.h,'#5c5058');rect(s.x,s.y+q.h*.48,q.w,3,'#b39a7466')});for(let i=0;i<70;i++){let X=(i*143)%world.w,Y=700+(i*71)%600,p=screen(X,Y);rect(p.x,p.y,33,2,'#80707866')}
-for(let x=100;x<world.w;x+=290){for(const y of [730,1210]){const s=screen(x,y);rect(s.x,s.y-78,7,78,'#1e1a26');c.fillStyle='#efb86a';c.beginPath();c.arc(s.x+3,s.y-81,12,0,Math.PI*2);c.shadowColor='#eeb365';c.shadowBlur=16;c.fill();c.shadowBlur=0}}}
+// Piso modular de Salem: ruas coloniais estilizadas, sarjetas, folhas e praças.
+// Quando o tileset PNG oficial for enviado, sua imagem substitui as texturas procedurais.
+const groundArt=new Image();groundArt.src='./assets/tiles/salem-ground-tiles.png';let groundReady=false;groundArt.onload=()=>groundReady=true;groundArt.onerror=()=>groundReady=false;
+const tileSize=84;
+function stoneTile(wx,wy,kind){
+ const seed=(Math.floor(wx/tileSize)*811+Math.floor(wy/tileSize)*319+991)|0;
+ const rnd=(n)=>{const v=Math.sin(seed*0.0003+n*98.31)*43758.5453;return v-Math.floor(v)};
+ let colors=kind==='stone'?['#403947','#514552','#67505a','#4a4050']:kind==='brick'?['#55323a','#673b3c','#45323c','#70473f']:['#393039','#554037','#624b3b','#4c403a'];
+ rect(wx,wy,tileSize,tileSize,kind==='dirt'?'#302b30':'#221e28');
+ if(kind==='dirt'){for(let k=0;k<17;k++){let px=wx+rnd(k)*tileSize,py=wy+rnd(k+40)*tileSize;rect(px,py,4+rnd(k+90)*12,2+rnd(k+30)*8,colors[Math.floor(rnd(k+100)*colors.length)])}}
+ else for(let row=0;row<4;row++)for(let col=0;col<3;col++){let xx=wx+col*29+(row%2)*-11, yy=wy+row*22;rect(xx+2,yy+2,26,18,colors[Math.floor(rnd(row*9+col)*colors.length)]);rect(xx+3,yy+3,21,2,'#a17b6544');}
+ for(let k=0;k<3;k++){if(rnd(k+77)>.53){let px=wx+8+rnd(k+26)*65,py=wy+8+rnd(k+56)*64;const leaf=['#bd592e','#ac3d29','#d98438','#793739'][Math.floor(rnd(k+92)*4)];rect(px,py,8,4,leaf);rect(px+3,py-2,3,8,leaf)}}
+}
+function ground(){
+ rect(0,0,sw,sh,'#100f19');const a=screen(0,0);
+ c.save();c.beginPath();c.rect(Math.max(0,a.x),Math.max(0,a.y),Math.min(sw,world.w+a.x),Math.min(sh,world.h+a.y));c.clip();
+ const area=[{x:0,y:765,w:world.w,h:400,kind:'stone'},{x:1130,y:0,w:270,h:world.h,kind:'stone'},{x:0,y:1000,w:world.w,h:90,kind:'brick'}];
+ const minX=Math.max(0,Math.floor((cam.x-sw/2)/tileSize)*tileSize),maxX=Math.min(world.w,cam.x+sw/2+tileSize);
+ const minY=Math.max(0,Math.floor((cam.y-sh/2)/tileSize)*tileSize),maxY=Math.min(world.h,cam.y+sh/2+tileSize);
+ for(let yy=minY;yy<maxY;yy+=tileSize)for(let xx=minX;xx<maxX;xx+=tileSize){
+   const mx=xx+tileSize/2,my=yy+tileSize/2;
+   let kind=area.some(q=>mx>=q.x&&mx<q.x+q.w&&my>=q.y&&my<q.y+q.h)?'stone':'dirt';
+   if(my>=1000&&my<1090)kind='brick';
+   const p=screen(xx,yy);
+   if(groundReady){
+     const column=kind==='stone'?((Math.floor(xx/tileSize)*5+Math.floor(yy/tileSize)*3)%4):kind==='brick'?4:5;
+     c.drawImage(groundArt,column*tileSize,0,tileSize,tileSize,p.x,p.y,tileSize,tileSize);
+   }else{c.save();c.translate(p.x-xx,p.y-yy);stoneTile(xx,yy,kind);c.restore()}
+ }
+ // Os contornos acompanham fisicamente os quarteirões e nunca cobrem os pés dos personagens.
+ area.forEach(q=>{const p=screen(q.x,q.y);c.strokeStyle='#ad886e';c.lineWidth=5;c.strokeRect(p.x,p.y,q.w,q.h)});
+ // Sarjetas, poças e tampas de inspeção.
+ for(let j=0;j<8;j++){let wx=175+j*302,wy=830+(j%2)*225,p=screen(wx,wy);if(p.x< -50||p.x>sw+50)continue;c.beginPath();c.ellipse(p.x,p.y,17,11,0,0,Math.PI*2);c.fillStyle='#171a2c';c.fill();c.strokeStyle='#ba8353';c.lineWidth=3;c.stroke();c.beginPath();c.moveTo(p.x-9,p.y);c.lineTo(p.x+9,p.y);c.stroke()}
+ for(let x=100;x<world.w;x+=290)for(const y of [730,1210]){const p=screen(x,y);rect(p.x,p.y-78,7,78,'#1e1a26');c.fillStyle='#efb86a';c.beginPath();c.arc(p.x+3,p.y-81,12,0,Math.PI*2);c.shadowColor='#eeb365';c.shadowBlur=16;c.fill();c.shadowBlur=0}
+ c.restore();
+}
 function person(n,main=false){const p=screen(n.x,n.y);c.fillStyle='#0006';c.beginPath();c.ellipse(p.x,p.y,20,7,0,0,7);c.fill();if(main){c.fillStyle='#e6e0e2';c.beginPath();c.moveTo(p.x-13,p.y-80);c.quadraticCurveTo(p.x-68,p.y-145,p.x-49,p.y-55);c.lineTo(p.x-11,p.y-52);c.moveTo(p.x+13,p.y-80);c.quadraticCurveTo(p.x+68,p.y-145,p.x+49,p.y-55);c.lineTo(p.x+11,p.y-52);c.fill();rect(p.x-17,p.y-70,34,52,'#251824');rect(p.x-10,p.y-67,20,42,'#922b45');rect(p.x-13,p.y-19,11,19,'#15131b');rect(p.x+2,p.y-19,11,19,'#15131b');c.fillStyle='#efd1b8';c.beginPath();c.arc(p.x,p.y-92,17,0,7);c.fill();c.strokeStyle='#0d0d17';c.lineWidth=7;c.beginPath();c.moveTo(p.x-10,p.y-105);c.quadraticCurveTo(p.x-34,p.y-144,p.x-25,p.y-150);c.moveTo(p.x+10,p.y-105);c.quadraticCurveTo(p.x+34,p.y-144,p.x+25,p.y-150);c.stroke();rect(p.x-10,p.y-98,8,3,'#4cb3df');rect(p.x+4,p.y-98,8,3,'#4cb3df');txt('SILAS',p.x,p.y-160,13)}else{rect(p.x-12,p.y-50,24,49,n.color);rect(p.x-9,p.y-7,8,7,'#22212a');rect(p.x+2,p.y-7,8,7,'#22212a');c.beginPath();c.arc(p.x,p.y-62,14,0,7);c.fillStyle='#d9ae92';c.fill();txt(n.name,p.x,p.y-94,13)}}
 function render(){cam.x+=(player.x-cam.x)*.12;cam.y+=(player.y-cam.y)*.12;ground();const actors=[...blocks.map(b=>({y:b.y,kind:'b',v:b})),...people.map(p=>({y:p.y,kind:'p',v:p})),{y:player.y,kind:'hero',v:player}];actors.sort((a,b)=>a.y-b.y).forEach(a=>a.kind==='b'?box(a.v):person(a.v,a.kind==='hero'));let n=near();$('tip').textContent=n&&n.d<130?'Pressione E / Interagir: '+n.name:'Explore as ruas para encontrar edifícios e moradores';$('status').textContent='📍 Centro de Salem · Observações: '+notes.size+' · '+Math.floor(minute/60%24).toString().padStart(2,'0')+':'+Math.floor(minute%60).toString().padStart(2,'0')}
 function near(){let opts=[...blocks.map(b=>({name:b.name,d:Math.hypot(player.x-(b.x+b.w/2),player.y-b.y),kind:'building',v:b})),...people.map(p=>({name:p.name,d:Math.hypot(player.x-p.x,player.y-p.y),kind:'npc',v:p}))];return opts.sort((a,b)=>a.d-b.d)[0]}
