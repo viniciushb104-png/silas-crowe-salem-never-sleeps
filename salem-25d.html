@@ -15,6 +15,7 @@ c.fillStyle='#0006';c.beginPath();c.ellipse(p.x+r/2,p.y+8,r*.54,20,0,0,7);c.fill
 function walkable(x,y){if(x<45||y<90||x>world.w-45||y>world.h-55)return false;return !blocks.some(b=>x>b.x-25&&x<b.x+b.w+25&&y>b.y-180&&y<b.y-4)}
 // Piso modular de Salem: ruas coloniais estilizadas, sarjetas, folhas e praças.
 // Quando o tileset PNG oficial for enviado, sua imagem substitui as texturas procedurais.
+const salemMap=new Image();let salemMapReady=false;salemMap.onload=()=>{salemMapReady=true};salemMap.onerror=()=>{salemMapReady=false};salemMap.src='./assets/maps/salem-ground-map.png';
 const groundArt=new Image();groundArt.src='./assets/tiles/salem-ground-tiles.png';let groundReady=false;groundArt.onload=()=>groundReady=true;groundArt.onerror=()=>groundReady=false;
 const tileSize=84;
 function stoneTile(wx,wy,kind){
@@ -27,6 +28,12 @@ function stoneTile(wx,wy,kind){
  for(let k=0;k<3;k++){if(rnd(k+77)>.53){let px=wx+8+rnd(k+26)*65,py=wy+8+rnd(k+56)*64;const leaf=['#bd592e','#ac3d29','#d98438','#793739'][Math.floor(rnd(k+92)*4)];rect(px,py,8,4,leaf);rect(px+3,py-2,3,8,leaf)}}
 }
 function ground(){
+ if(salemMapReady){
+  rect(0,0,sw,sh,'#100f19');
+  const origin=screen(0,0);
+  c.drawImage(salemMap,origin.x,origin.y,world.w,world.h);
+  return;
+ }
  rect(0,0,sw,sh,'#100f19');const a=screen(0,0);
  c.save();c.beginPath();c.rect(Math.max(0,a.x),Math.max(0,a.y),Math.min(sw,world.w+a.x),Math.min(sh,world.h+a.y));c.clip();
  const area=[{x:0,y:765,w:world.w,h:400,kind:'stone'},{x:1130,y:0,w:270,h:world.h,kind:'stone'},{x:0,y:1000,w:world.w,h:90,kind:'brick'}];
